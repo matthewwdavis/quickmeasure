@@ -2,6 +2,8 @@
 
 **Tree heights from photos with a reference stick.**
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24467971.svg)](https://doi.org/10.5281/zenodo.24467971)
+
 [**Open quickmeasure**](https://matthewwdavis.github.io/quickmeasure/) · [**Download it** (one HTML file)](https://github.com/matthewwdavis/quickmeasure/releases/latest/download/quickmeasure.html) · [How to cite](#citing-quickmeasure)
 
 <picture>
@@ -86,23 +88,27 @@ quickmeasure also keeps your saved list and points in the browser between visits
 
 If you use quickmeasure in your work, please cite it. GitHub's **Cite this repository** button (from [`CITATION.cff`](CITATION.cff)) gives APA and BibTeX versions, or:
 
-> Davis, M. (2026). *quickmeasure: tree heights from photos with a reference stick* (Version 1.0.0) [Computer software]. https://github.com/matthewwdavis/quickmeasure
+> Davis, M. (2026). *quickmeasure: tree heights from photos with a reference stick* (Version 1.0.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.24467971
 
 ```bibtex
 @software{davis_quickmeasure_2026,
-  author  = {Davis, Matthew},
-  title   = {quickmeasure: tree heights from photos with a reference stick},
-  year    = {2026},
-  version = {1.0.0},
-  url     = {https://github.com/matthewwdavis/quickmeasure}
+  author    = {Davis, Matthew},
+  title     = {quickmeasure: tree heights from photos with a reference stick},
+  year      = {2026},
+  version   = {1.0.0},
+  publisher = {Zenodo},
+  doi       = {10.5281/zenodo.24467971},
+  url       = {https://github.com/matthewwdavis/quickmeasure}
 }
 ```
+
+That DOI is for version 1.0.0, the exact code archived on Zenodo. To refer to quickmeasure as a whole rather than one version, use [10.5281/zenodo.24467970](https://doi.org/10.5281/zenodo.24467970), which always leads to the newest version.
 
 A methods sentence could read: *Tree heights were measured from photographs with quickmeasure v1.0.0 (Davis 2026), which scales each tree's length in pixels by that of a reference stick of known length standing against the trunk.*
 
 ## Versions
 
-- **1.0.0** (2026-11-22): first public release. Heights are worked out exactly as in the 2026-10-05 version this tool grew out of, which is kept in [`tests/fixtures/`](tests/fixtures/). See [`CHANGELOG.md`](CHANGELOG.md) for what was added.
+- **1.0.0** (2026-11-23, [10.5281/zenodo.24467971](https://doi.org/10.5281/zenodo.24467971)): first public release. Heights are worked out exactly as in the 2026-10-05 version this tool grew out of, which is kept in [`tests/fixtures/`](tests/fixtures/). See [`CHANGELOG.md`](CHANGELOG.md) for what was added.
 
 ## For developers
 

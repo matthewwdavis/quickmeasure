@@ -1,6 +1,8 @@
 # Changelog
 
-## 1.0.0 (2026-11-22)
+## 1.0.0 (2026-11-23)
+
+Archived on Zenodo: https://doi.org/10.5281/zenodo.24467971
 
 First public release. It is the tree-height app used to measure trees on 2026-10-05 (kept as `tests/fixtures/tree_height_artifact_2026-10-05.html`). Heights are worked out exactly as in that version, and `tests/test_measure.mjs` checks that on 20,000 random cases.
 

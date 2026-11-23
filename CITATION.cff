@@ -15,7 +15,15 @@ authors:
   - given-names: Matthew
     family-names: Davis
 version: "1.0.0"
-date-released: "2026-11-22"
+date-released: "2026-11-23"
+doi: "10.5281/zenodo.24467971"
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.24467971"
+    description: "Version 1.0.0, archived on Zenodo"
+  - type: doi
+    value: "10.5281/zenodo.24467970"
+    description: "All versions; always resolves to the newest"
 license: MIT
 repository-code: "https://github.com/matthewwdavis/quickmeasure"
 url: "https://matthewwdavis.github.io/quickmeasure/"
