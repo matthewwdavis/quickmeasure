@@ -1,0 +1,1120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tree height from photos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+  --bg:#F2F4F1; --surface:#FFFFFF; --ink:#17201B; --muted:#56655C; --line:#D3DBD5;
+  --stage:#1D2521; --stick:#D2237C; --tree:#0090AF; --warn:#8A5A00; --warn-bg:#FFF3D6;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --num:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#111613; --surface:#18201B; --ink:#E5ECE7; --muted:#99A89F; --line:#2B3530;
+    --stage:#0B0F0D; --stick:#FF5BAE; --tree:#39C6E5; --warn:#F2C46B; --warn-bg:#2E2512;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#111613; --surface:#18201B; --ink:#E5ECE7; --muted:#99A89F; --line:#2B3530;
+  --stage:#0B0F0D; --stick:#FF5BAE; --tree:#39C6E5; --warn:#F2C46B; --warn-bg:#2E2512;
+}
+*,*::before,*::after{box-sizing:inherit}
+[hidden]{display:none!important}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:400 15px/1.5 var(--body);display:flex;flex-direction:column;-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--tree);outline-offset:2px}
+img{max-width:100%}
+
+header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 18px;border-bottom:1px solid var(--line);background:var(--surface)}
+.brand h1{margin:0;font:600 24px/1.1 var(--num);letter-spacing:.01em}
+.brand p{margin:0;color:var(--muted);font-size:13.5px}
+
+.btn{appearance:none;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 14px;font-weight:500;cursor:pointer;line-height:1.2;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn.quiet{border-color:transparent;background:transparent;color:var(--muted);padding:6px 8px}
+.btn.quiet:hover{color:var(--ink)}
+
+.app{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 352px}
+.stage{display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--stage)}
+.viewer{position:relative;flex:1;min-height:0;overflow:hidden}
+#cv{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair;display:block}
+.viewer.drop::after{content:"";position:absolute;inset:10px;border:2px dashed rgba(255,255,255,.6);border-radius:12px;pointer-events:none}
+.hint{display:flex;align-items:center;gap:9px;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,.08);color:#F2F5F3;font-size:14.5px;font-weight:500}
+.hint span{flex:1;min-width:0}
+.undo-btn{flex:none;display:inline-flex;align-items:center;gap:8px;margin:-3px -6px -3px 0;padding:5px 8px 5px 12px;border:1px solid rgba(255,255,255,.28);border-radius:8px;background:rgba(255,255,255,.06);color:#F2F5F3;font:500 14px/1.2 var(--body);cursor:pointer;white-space:nowrap}
+.undo-btn:hover:not(:disabled){border-color:rgba(255,255,255,.6);background:rgba(255,255,255,.12)}
+.undo-btn:disabled{opacity:.4;cursor:default}
+.undo-btn kbd{font:600 11px/1 var(--body);padding:3px 5px;border-radius:4px;background:rgba(255,255,255,.14)}
+@media (max-width:820px){.undo-btn kbd{display:none}}
+.hint i{flex:none;width:10px;height:10px;border-radius:50%;background:var(--c,#fff)}
+.empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;color:#C9D3CD}
+.empty svg{opacity:.7}
+.empty p{margin:0;max-width:34ch}
+.empty .btn{background:#F2F5F3;color:#17201B;border-color:#F2F5F3}
+.toolbar{display:flex;align-items:center;gap:4px;padding:6px 10px;border-top:1px solid rgba(255,255,255,.08);color:#C9D3CD;overflow-x:auto}
+.toolbar .btn{background:transparent;border-color:rgba(255,255,255,.16);color:#E7ECE9;padding:6px 11px}
+.toolbar .btn:hover{border-color:rgba(255,255,255,.45)}
+.toolbar .sep{flex:1}
+.toolbar small{white-space:nowrap;opacity:.75;font-size:12.5px;padding-left:8px}
+
+.panel{overflow-y:auto;background:var(--surface);border-left:1px solid var(--line)}
+.sec{padding:16px 18px;border-bottom:1px solid var(--line)}
+.sec h2{margin:0 0 10px;font:600 15px/1.3 var(--body)}
+.strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+.thumb{position:relative;flex:none;width:60px;height:60px;padding:0;border:2px solid transparent;border-radius:8px;overflow:hidden;background:var(--line);cursor:pointer}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb[aria-current="true"]{border-color:var(--ink)}
+.thumb .done{position:absolute;right:3px;bottom:3px;width:18px;height:18px;border-radius:50%;background:var(--tree);color:#fff;display:grid;place-items:center}
+.strip-empty{color:var(--muted);font-size:14px;margin:0}
+.photo-pos{margin:8px 0 0;font-size:13.5px;color:var(--muted)}
+.photo-pos .taken{display:block}
+.photos-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.photos-head h2{margin:0}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;padding:2px;gap:2px}
+.seg button{appearance:none;border:0;background:transparent;border-radius:6px;padding:4px 9px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.photo-pos b{color:var(--ink);font-weight:600}
+.thumb .num{position:absolute;left:0;right:0;top:0;padding:1px 3px;background:rgba(10,14,12,.72);color:#F2F5F3;font:600 11px/1.3 "Barlow Condensed",system-ui,sans-serif;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.ref{display:flex;align-items:center;gap:10px;margin-bottom:14px;font-size:14px;color:var(--muted)}
+.ref input{width:76px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);font-variant-numeric:tabular-nums}
+ol.steps{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+ol.steps li{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:14.5px}
+ol.steps .n{flex:none;width:24px;height:24px;border-radius:50%;border:1.5px solid var(--c);color:var(--c);display:grid;place-items:center;font:600 13px/1 var(--num)}
+ol.steps li.done{color:var(--ink)}
+ol.steps li.done .n{background:var(--c);color:var(--surface)}
+ol.steps li.active{color:var(--ink);font-weight:600}
+ol.steps li.active .n{box-shadow:0 0 0 3px color-mix(in srgb,var(--c) 25%,transparent)}
+
+.readout{display:flex;align-items:baseline;gap:6px;border-left:4px solid var(--tree);padding-left:14px}
+.readout .val{font:600 68px/0.95 var(--num);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.readout .unit{font:500 26px/1 var(--num);color:var(--muted)}
+.readsub{margin:10px 0 0;color:var(--muted);font-size:14px}
+.readsub b{color:var(--ink);font-weight:600}
+.warn{margin:12px 0 0;padding:9px 12px;border-radius:8px;background:var(--warn-bg);color:var(--warn);font-size:13.5px}
+.save{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+.save label{font-size:13px;color:var(--muted)}
+.ids{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr);gap:8px}
+.ids label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.save input{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);width:100%;color:var(--ink)}
+.trees-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.trees-head h2{margin:0}
+.trees-head .btn{padding:6px 12px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.chips:empty{display:none}
+.chip{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:5px 11px 5px 8px;border:1px solid var(--line);border-radius:999px;background:var(--surface);cursor:pointer;font-size:13.5px}
+.chip i{flex:none;width:8px;height:8px;border-radius:50%;background:var(--tree);opacity:.45}
+.chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:16ch}
+.chip b{font:600 14px/1 var(--num);font-variant-numeric:tabular-nums}
+.chip svg{flex:none;color:var(--tree)}
+.chip[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.chip[aria-pressed="true"] i{opacity:1}
+.chip.dirty{border-style:dashed}
+.save-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.save-btns .btn{white-space:normal}
+.save-extra{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.saved-list .dead{font:500 15px/1 var(--body);color:var(--muted)}
+#treeSteps{margin-bottom:16px}
+.saved-list .meta{display:block;font-size:12.5px;color:var(--muted)}
+
+.saved-list{list-style:none;margin:0;padding:0}
+.saved-list li{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+.saved-list li:first-child{border-top:0}
+.saved-list li.editing{display:flex;flex-direction:column;align-items:stretch;gap:8px;padding:12px 0}
+.saved-list li.editing input{padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--bg);width:100%;color:var(--ink)}
+.saved-list .edit-info{margin:0;font-size:13px;color:var(--muted)}
+.saved-list .edit-btns{display:flex;gap:8px}
+.btn.armed,.btn.quiet.armed{color:var(--warn);background:var(--warn-bg);border-color:var(--warn)}
+.saved-list .acts{display:flex;flex-direction:column;align-items:flex-end}
+.saved-list .acts .btn{padding:2px 6px;font-size:13.5px}
+.saved-list .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:none;border:0;padding:0;text-align:left;cursor:pointer}
+.saved-list .nm:hover{text-decoration:underline}
+.saved-list .h{font:600 19px/1 var(--num);font-variant-numeric:tabular-nums;text-align:right}
+.saved-list .h small{display:block;font:400 12px/1.3 var(--body);color:var(--muted)}
+.export{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.muted{color:var(--muted);font-size:14px;margin:0}
+details summary{cursor:pointer;font-weight:600}
+details ul{margin:10px 0 0;padding-left:18px;color:var(--muted);font-size:14px;display:grid;gap:6px}
+.status{min-height:20px;margin:8px 0 0;font-size:13.5px;color:var(--tree)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+@media (max-width:820px){
+  body{height:auto;min-height:100%}
+  .app{display:block}
+  .stage{height:62vh;height:62svh}
+  .panel{border-left:0;overflow:visible}
+  .toolbar small{display:none}
+  .brand p{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <h1>Tree height</h1>
+    <p>Measure trees in photos against a reference stick</p>
+  </div>
+  <button class="btn primary" id="addBtn" type="button">Add photos</button>
+  <input type="file" id="file" accept="image/*" multiple class="sr" tabindex="-1" aria-hidden="true">
+</header>
+
+<main class="app">
+  <section class="stage" aria-label="Photo">
+    <div class="hint" id="hint" hidden><i></i><span></span><button class="undo-btn" id="undoTop" type="button" disabled>Undo last point <kbd>Esc</kbd></button></div>
+    <div class="viewer" id="viewer">
+      <canvas id="cv" aria-label="Photo with measurement points. Click to place points, drag points to adjust. Click a tree's line to select it."></canvas>
+      <div class="empty" id="empty">
+        <svg width="56" height="56" viewBox="0 0 56 56" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M28 6 14 28h7l-9 13h32l-9-13h7z"/><path d="M28 41v9"/><path d="M47 10v40" stroke-dasharray="3 3"/><path d="M44 10h6M44 50h6"/></svg>
+        <p>Add your photos to start. You can also drop them here.</p>
+        <button class="btn" id="emptyAdd" type="button">Add photos</button>
+      </div>
+    </div>
+    <div class="toolbar" id="toolbar">
+      <button class="btn" id="zOut" type="button" aria-label="Zoom out">−</button>
+      <button class="btn" id="zFit" type="button">Fit</button>
+      <button class="btn" id="zIn" type="button" aria-label="Zoom in">+</button>
+      <small>Scroll or pinch to zoom, drag to pan</small>
+      <span class="sep"></span>
+      <button class="btn" id="undo" type="button">Undo point</button>
+      <button class="btn" id="clear" type="button">Clear tree</button>
+    </div>
+  </section>
+
+  <aside class="panel">
+    <div class="sec">
+      <div class="photos-head">
+        <h2 id="photosHead">Photos</h2>
+        <div class="seg" id="sortBy" role="group" aria-label="Sort photos by">
+          <button type="button" data-sort="name" aria-pressed="true">File name</button>
+          <button type="button" data-sort="time" aria-pressed="false">Time taken</button>
+        </div>
+      </div>
+      <div class="strip" id="strip"><p class="strip-empty">No photos yet.</p></div>
+      <p class="photo-pos" id="photoPos" hidden></p>
+    </div>
+
+    <div class="sec">
+      <div class="ref">
+        <label for="ref">Reference mark on the stick</label>
+        <input id="ref" type="number" min="0.1" step="0.1" value="3" inputmode="decimal"><span>m</span>
+      </div>
+      <ol class="steps" id="stickSteps">
+        <li style="--c:var(--stick)"><span class="n">1</span><span>Bottom of the stick</span></li>
+        <li style="--c:var(--stick)"><span class="n">2</span><span id="step2">3 m mark on the stick</span></li>
+      </ol>
+    </div>
+
+    <div class="sec" aria-live="polite">
+      <div class="trees-head">
+        <h2 id="treesHead">Trees in this photo</h2>
+        <button class="btn" id="addTree" type="button" disabled>Add tree</button>
+      </div>
+      <div class="chips" id="chips"></div>
+      <ol class="steps" id="treeSteps">
+        <li style="--c:var(--tree)"><span class="n">3</span><span>Base of the tree</span></li>
+        <li style="--c:var(--tree)"><span class="n">4</span><span>Top of the tree</span></li>
+      </ol>
+      <div class="readout"><span class="val" id="hval">–</span><span class="unit">m</span></div>
+      <p class="readsub" id="hsub">Mark the stick and the tree to get a height.</p>
+      <p class="warn" id="warn" hidden></p>
+      <div class="save">
+        <div class="ids">
+          <label>Tree<input id="fTree" type="text" placeholder="Tree ID" autocomplete="off"></label>
+          <label>Block<input id="fBlock" type="text" autocomplete="off"></label>
+          <label>Row<input id="fRow" type="text" autocomplete="off"></label>
+        </div>
+        <div class="save-btns">
+          <button class="btn primary" id="saveAdd" type="button" disabled>Save and add tree</button>
+          <button class="btn" id="saveNext" type="button" disabled>Save and next photo</button>
+        </div>
+        <div class="save-extra">
+          <button class="btn" id="deadBtn" type="button" disabled>Record as dead or removed</button>
+          <button class="btn quiet" id="removeTree" type="button" hidden>Remove this tree</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h2 id="savedHead">Saved heights</h2>
+      <ul class="saved-list" id="saved"></ul>
+      <p class="muted" id="savedEmpty">Saved heights will appear here.</p>
+      <div class="export" id="exportRow" hidden>
+        <button class="btn" id="dlBtn" type="button" hidden>Download CSV</button>
+        <button class="btn" id="copyBtn" type="button">Copy for spreadsheet</button>
+        <button class="btn quiet" id="clearSaved" type="button">Clear list</button>
+      </div>
+      <p class="status" id="status" role="status"></p>
+    </div>
+
+    <div class="sec">
+      <details>
+        <summary>Tips for an accurate height</summary>
+        <ul>
+          <li>The stick needs to be right against the trunk. If it's closer to the camera than the tree, the height comes out too low; if it's farther away, too high.</li>
+          <li>Shoot from well back, ideally at least as far from the tree as it is tall, and hold the camera level.</li>
+          <li>On wide, rounded crowns the highest point you can see is often in front of the true top, so heights tend to read low.</li>
+          <li>When you measure several trees in one photo, each tree needs to be about as far from the camera as the stick is. Trees farther back come out too short.</li>
+          <li>Zoom in before placing or adjusting points. The ± figure only reflects how precisely the points are placed, not the setup issues above.</li>
+        </ul>
+      </details>
+    </div>
+  </aside>
+</main>
+
+<script>
+(function(){
+"use strict";
+const $ = s => document.querySelector(s);
+const cv = $("#cv"), ctx = cv.getContext("2d"), viewer = $("#viewer");
+const STORE = "treeheight.saved.v1", FT = 3.28084, MAXS = 24;
+const state = { photos: [], cur: -1, ref: 3, saved: [], last_name: "", last_block: "", last_row: "", draft: {}, sortBy: "name" };
+let dpr = window.devicePixelRatio || 1, hover = null, downloads = null, statusTimer = 0;
+
+/* ---------- storage ---------- */
+function loadStore(){
+  try{
+    const raw = localStorage.getItem(STORE);
+    if(!raw) return;
+    const d = JSON.parse(raw);
+    if(Array.isArray(d.saved)) state.saved = d.saved.filter(s => s && (typeof s.h === "number" || s.dead));
+    if(typeof d.ref === "number" && d.ref > 0) state.ref = d.ref;
+    if(typeof d.last_name === "string") state.last_name = d.last_name;
+    if(d.sortBy === "time" || d.sortBy === "name") state.sortBy = d.sortBy;
+    if(typeof d.last_block === "string") state.last_block = d.last_block;
+    if(typeof d.last_row === "string") state.last_row = d.last_row;
+  }catch(e){}
+}
+function persist(){
+  try{ localStorage.setItem(STORE, JSON.stringify({ saved: state.saved, ref: state.ref, sortBy: state.sortBy, last_name: state.last_name, last_block: state.last_block, last_row: state.last_row })); }catch(e){}
+}
+
+/* ---------- helpers ---------- */
+const uid = () => Math.random().toString(36).slice(2, 10);
+const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+const mid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const cur = () => state.photos[state.cur] || null;
+const tr = p => p ? p.trees[p.ti] : null;
+const fmt = (n, d = 1) => n.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
+const fmtRef = () => String(+state.ref.toFixed(2));
+const short = (t, n = 18) => t.length > n ? t.slice(0, n - 1) + "…" : t;
+function css(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+function rel(e){ const r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+function toImg(p, s){ const v = p.view; return { x: (s.x - v.tx) / v.s, y: (s.y - v.ty) / v.s }; }
+function toScr(p, i){ const v = p.view; return { x: i.x * v.s + v.tx, y: i.y * v.s + v.ty }; }
+function notify(msg){
+  const el = $("#status"); el.textContent = msg;
+  clearTimeout(statusTimer); statusTimer = setTimeout(() => { el.textContent = ""; }, 4500);
+}
+
+/* ---------- photos and trees ---------- */
+function treeField(p, t, key){
+  const src = p && t ? t : state.draft;
+  return src[key] != null ? src[key] : state["last_" + key] || "";
+}
+function treeName(p, t){ return treeField(p, t, "name") || `Tree ${p.trees.indexOf(t) + 1}`; }
+function addTree(p){
+  const empty = p.trees.findIndex(t => t.pts.length === 0 && !t.savedId);
+  if(empty >= 0){ p.ti = empty; return; }
+  p.trees.push({ id: uid(), pts: [], name: null, block: null, row: null, savedId: null });
+  p.ti = p.trees.length - 1;
+}
+function removeTree(p, j){
+  const t = p.trees[j];
+  if(t.savedId){ state.saved = state.saved.filter(s => s.id !== t.savedId); persist(); renderSaved(); }
+  p.trees.splice(j, 1);
+  if(!p.trees.length) addTree(p);
+  p.ti = clamp(p.ti >= j ? p.ti - 1 : p.ti, 0, p.trees.length - 1);
+}
+const savedCount = p => p.trees.filter(t => t.savedId).length;
+/* Capture time from JPEG EXIF (DateTimeOriginal + SubSecTimeOriginal), kept as wall-clock time. */
+function exifTime(buf){
+  try{
+    const v = new DataView(buf);
+    if(v.getUint16(0) !== 0xFFD8) return null;
+    let o = 2;
+    while(o + 4 <= v.byteLength){
+      if(v.getUint8(o) !== 0xFF) return null;
+      const marker = v.getUint8(o + 1);
+      if(marker === 0xD9 || marker === 0xDA) return null;
+      const len = v.getUint16(o + 2);
+      if(marker === 0xE1 && v.getUint32(o + 4) === 0x45786966) return tiffTime(v, o + 10);
+      o += 2 + len;
+    }
+  }catch(e){}
+  return null;
+}
+function tiffTime(v, t){
+  const le = v.getUint16(t) === 0x4949;
+  const u16 = a => v.getUint16(a, le), u32 = a => v.getUint32(a, le);
+  if(u16(t + 2) !== 42) return null;
+  const ifd = off => {
+    const a = t + off, n = u16(a), out = {};
+    for(let i = 0; i < n; i++){ const e = a + 2 + i * 12; out[u16(e)] = { count: u32(e + 4), val: e + 8 }; }
+    return out;
+  };
+  const str = ent => {
+    if(!ent) return null;
+    const p = ent.count > 4 ? t + u32(ent.val) : ent.val;
+    let r = "";
+    for(let k = 0; k < ent.count; k++){ const c = v.getUint8(p + k); if(!c) break; r += String.fromCharCode(c); }
+    return r;
+  };
+  const ifd0 = ifd(u32(t + 4));
+  let dt = null, sub = null;
+  if(ifd0[0x8769]){
+    const ex = ifd(u32(ifd0[0x8769].val));
+    dt = str(ex[0x9003]) || str(ex[0x9004]);
+    sub = str(ex[0x9291]) || str(ex[0x9292]);
+  }
+  if(!dt) dt = str(ifd0[0x0132]);
+  const m = dt && dt.match(/(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/);
+  if(!m || +m[1] < 1990) return null;
+  let ms = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
+  const sm = sub && sub.match(/^\s*(\d+)/);
+  if(sm) ms += Number("0." + sm[1]) * 1000;
+  return ms;
+}
+async function captureTime(f){
+  let ms = null;
+  try{ ms = exifTime(await f.slice(0, 256 * 1024).arrayBuffer()); }catch(e){}
+  if(ms != null) return { ms, src: "exif" };
+  const lm = f.lastModified || 0;
+  return { ms: lm - new Date(lm).getTimezoneOffset() * 60000, src: "file" };
+}
+function fmtTime(ms){
+  try{
+    return new Date(ms).toLocaleString(undefined, { timeZone: "UTC", year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", second: "2-digit" });
+  }catch(e){ return ""; }
+}
+async function readFile(f){
+  const taken = await captureTime(f);
+  const p = await readImage(f);
+  if(p){ p.taken = taken.ms; p.takenSrc = taken.src; }
+  return p;
+}
+function readImage(f){
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onerror = () => { notify(`Couldn't read ${f.name}.`); resolve(null); };
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => { notify(`Couldn't open ${f.name}. If it's a HEIC photo, export it as JPEG first.`); resolve(null); };
+      img.onload = () => {
+        const t = document.createElement("canvas"), k = 120 / Math.max(img.naturalWidth, img.naturalHeight);
+        t.width = Math.max(1, Math.round(img.naturalWidth * k)); t.height = Math.max(1, Math.round(img.naturalHeight * k));
+        t.getContext("2d").drawImage(img, 0, 0, t.width, t.height);
+        let thumb = ""; try{ thumb = t.toDataURL("image/jpeg", 0.75); }catch(e){}
+        const p = { id: uid(), file: f.name.replace(/\.[^.]+$/, ""), fname: f.name, img, thumb, stick: [], trees: [], ti: 0, view: null };
+        addTree(p);
+        resolve(p);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(f);
+  });
+}
+async function addFiles(files){
+  const list = [...files].filter(f => /^image\//.test(f.type) || /\.(jpe?g|png|webp|gif|heic|heif|bmp|avif)$/i.test(f.name));
+  if(!list.length){ notify("Those files aren't images. Add JPEG or PNG photos."); return; }
+  list.sort((a, b) => byName(a.name, b.name));
+  let noExif = 0;
+  const skipped = [];
+  for(const f of list){
+    if(state.photos.some(q => q.fname === f.name)){ skipped.push(f.name); continue; }
+    const p = await readFile(f);
+    if(p){
+      if(p.takenSrc !== "exif") noExif++;
+      insertPhoto(p);
+      if(state.cur < 0) select(0); else renderStrip();
+    }
+  }
+  if(state.cur !== 0 && state.photos.length && !state.photos.some(q => savedCount(q) || q.stick.length)) select(0);
+  if(noExif && state.sortBy === "time") notify(`${noExif} photo${noExif === 1 ? " has" : "s have"} no capture time saved, so the file date is used for ${noExif === 1 ? "it" : "them"}.`);
+  if(skipped.length) notify(`Skipped ${skipped.length} photo${skipped.length === 1 ? "" : "s"} already loaded: ${skipped.slice(0, 3).join(", ")}${skipped.length > 3 ? "…" : ""}`);
+}
+const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
+function byName(a, b){ return collator.compare(a, b) || (a < b ? -1 : a > b ? 1 : 0); }
+function comparePhotos(a, b){
+  if(state.sortBy === "time"){ const d = (a.taken || 0) - (b.taken || 0); if(d) return d; }
+  return byName(a.fname, b.fname);
+}
+function resort(){
+  const curId = cur() ? cur().id : null;
+  state.photos.sort(comparePhotos);
+  if(curId) state.cur = state.photos.findIndex(q => q.id === curId);
+}
+function setSort(by){
+  if(state.sortBy === by) return;
+  state.sortBy = by; persist(); resort();
+  renderSort(); renderStrip(); renderPanel();
+  const missing = state.photos.filter(q => q.takenSrc !== "exif").length;
+  if(by === "time" && missing) notify(`${missing} photo${missing === 1 ? " has" : "s have"} no capture time saved, so the file date is used for ${missing === 1 ? "it" : "them"}.`);
+}
+function renderSort(){
+  document.querySelectorAll("#sortBy button").forEach(b => b.setAttribute("aria-pressed", b.dataset.sort === state.sortBy ? "true" : "false"));
+}
+function insertPhoto(p){
+  const curId = cur() ? cur().id : null;
+  let i = state.photos.findIndex(q => comparePhotos(p, q) < 0);
+  if(i < 0) i = state.photos.length;
+  state.photos.splice(i, 0, p);
+  if(curId) state.cur = state.photos.findIndex(q => q.id === curId);
+}
+function select(i){
+  if(i < 0 || i >= state.photos.length) return;
+  state.cur = i;
+  const p = cur();
+  if(!p.view) fit(p);
+  renderStrip(); renderPanel(); draw();
+}
+function fitScale(p){
+  const w = cv.clientWidth, h = cv.clientHeight;
+  return Math.min(w / p.img.naturalWidth, h / p.img.naturalHeight) * 0.94;
+}
+function fit(p){
+  const w = cv.clientWidth, h = cv.clientHeight;
+  if(!w || !h){ p.view = { s: 1, tx: 0, ty: 0, auto: true }; return; }
+  const s = fitScale(p);
+  p.view = { s, tx: (w - p.img.naturalWidth * s) / 2, ty: (h - p.img.naturalHeight * s) / 2, auto: true };
+}
+function zoomAt(x, y, f){
+  const p = cur(); if(!p) return;
+  const v = p.view, ns = clamp(v.s * f, fitScale(p) * 0.5, MAXS), k = ns / v.s;
+  v.tx = x - (x - v.tx) * k; v.ty = y - (y - v.ty) * k; v.s = ns; v.auto = false;
+  draw();
+}
+const placeErr = p => Math.max(0.75, 1.5 / p.view.s);
+const needsPoint = p => p && (p.stick.length < 2 || tr(p).pts.length < 2);
+
+/* ---------- measurement ---------- */
+function measureTree(p, t){
+  if(!p || !t || p.stick.length < 2 || t.pts.length < 2) return null;
+  const [a, b] = p.stick, [c, d] = t.pts;
+  const stickPx = dist(a, b), treePx = dist(c, d);
+  if(stickPx < 1) return null;
+  const h = treePx * state.ref / stickPx;
+  const es = Math.hypot(a.e, b.e) / stickPx, et = treePx > 0 ? Math.hypot(c.e, d.e) / treePx : 0;
+  return { h, err: h * Math.hypot(es, et), stickPx, treePx };
+}
+function isDirty(p, t){
+  if(!t.savedId) return false;
+  const s = state.saved.find(x => x.id === t.savedId), m = measureTree(p, t);
+  if(!s || !m) return true;
+  return Math.abs(s.h - m.h) > 0.005 || s.name !== treeField(p, t, "name") || (s.block || "") !== treeField(p, t, "block") || (s.row || "") !== treeField(p, t, "row");
+}
+
+/* ---------- canvas ---------- */
+function resize(){
+  dpr = window.devicePixelRatio || 1;
+  const w = viewer.clientWidth, h = viewer.clientHeight;
+  cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+  state.photos.forEach(p => { if(p.view && p.view.auto) fit(p); });
+  draw();
+}
+function pill(c, x, y, text, color){
+  c.font = '600 13px "Barlow", system-ui, sans-serif';
+  const w = c.measureText(text).width + 14, h = 22;
+  c.fillStyle = "rgba(10,14,12,.85)";
+  c.beginPath();
+  if(c.roundRect) c.roundRect(x, y - h / 2, w, h, 11); else c.rect(x, y - h / 2, w, h);
+  c.fill();
+  c.fillStyle = color; c.fillRect(x + 6, y - 4, 3, 8);
+  c.fillStyle = "#F2F5F3"; c.textBaseline = "middle"; c.textAlign = "left"; c.fillText(text, x + 12, y + 0.5);
+}
+function line(c, a, b, color, dashed){
+  c.save(); c.lineCap = "round";
+  if(dashed) c.setLineDash([6, 5]);
+  c.strokeStyle = "rgba(0,0,0,.55)"; c.lineWidth = 4.5; c.beginPath(); c.moveTo(a.x, a.y); c.lineTo(b.x, b.y); c.stroke();
+  c.strokeStyle = color; c.lineWidth = 2; c.beginPath(); c.moveTo(a.x, a.y); c.lineTo(b.x, b.y); c.stroke();
+  c.restore();
+}
+function marker(c, x, y, color, num, small){
+  const r = small ? 6 : 9;
+  c.save();
+  c.strokeStyle = "rgba(0,0,0,.6)"; c.lineWidth = 3.5;
+  c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.stroke();
+  c.strokeStyle = color; c.lineWidth = 1.75;
+  c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.stroke();
+  if(!small){
+    c.beginPath();
+    [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dx, dy]) => { c.moveTo(x + dx * (r + 2), y + dy * (r + 2)); c.lineTo(x + dx * (r + 7), y + dy * (r + 7)); });
+    c.stroke();
+  }
+  c.fillStyle = color; c.strokeStyle = "rgba(0,0,0,.7)"; c.lineWidth = 1;
+  c.beginPath(); c.arc(x, y, 1.6, 0, Math.PI * 2); c.fill(); c.stroke();
+  if(num != null){
+    c.font = '600 12px "Barlow Condensed", system-ui, sans-serif'; c.textBaseline = "middle";
+    c.fillStyle = "rgba(10,14,12,.85)"; c.beginPath(); c.arc(x + 15, y - 15, 8, 0, Math.PI * 2); c.fill();
+    c.fillStyle = color; c.textAlign = "center"; c.fillText(String(num), x + 15, y - 14.5);
+  }
+  c.restore();
+}
+function drawTree(c, map, p, t, active, rubber){
+  const tree = css("--tree"), pts = t.pts.map(map), m = measureTree(p, t);
+  c.save();
+  if(!active) c.globalAlpha = 0.6;
+  if(pts.length === 2) line(c, pts[0], pts[1], tree);
+  if(active && rubber && pts.length === 1 && p.stick.length === 2) line(c, pts[0], rubber, tree, true);
+  if(m){
+    const q = mid(pts[0], pts[1]);
+    const label = p.trees.length > 1 ? `${short(treeName(p, t), 14)}: ${fmt(m.h)} m` : `${fmt(m.h)} m`;
+    pill(c, q.x + 18, q.y, label, tree);
+  }
+  pts.forEach((q, i) => marker(c, q.x, q.y, tree, active ? i + 3 : null, !active));
+  c.restore();
+}
+function overlay(c, map, p, rubber){
+  const stick = css("--stick");
+  p.trees.forEach((t, j) => { if(j !== p.ti) drawTree(c, map, p, t, false, null); });
+  const sp = p.stick.map(map);
+  if(sp.length === 2){ line(c, sp[0], sp[1], stick); const q = mid(sp[0], sp[1]); pill(c, q.x + 18, q.y, fmtRef() + " m", stick); }
+  if(rubber && sp.length === 1) line(c, sp[0], rubber, stick, true);
+  sp.forEach((q, i) => marker(c, q.x, q.y, stick, i + 1, false));
+  drawTree(c, map, p, tr(p), true, rubber);
+}
+/* Horizontal dashed guide across the full width of the photo, at the level of the point being placed or dragged. */
+function guideLine(c, map, p, g){
+  const a = map({ x: 0, y: g.y }), b = map({ x: p.img.naturalWidth, y: g.y });
+  c.save(); c.lineCap = "butt";
+  c.setLineDash([9, 6]);
+  c.strokeStyle = "rgba(0,0,0,.55)"; c.lineWidth = 3.5;
+  c.beginPath(); c.moveTo(a.x, a.y); c.lineTo(b.x, b.y); c.stroke();
+  c.strokeStyle = g.color; c.lineWidth = 1.5;
+  c.beginPath(); c.moveTo(a.x, a.y); c.lineTo(b.x, b.y); c.stroke();
+  c.restore();
+}
+function loupe(p, focus, guide){
+  const w = cv.clientWidth, R = Math.min(72, w / 5), Z = 4, pad = 12;
+  let cx = pad + R, cy = pad + R;
+  if(focus.x < 2 * R + 3 * pad && focus.y < 2 * R + 3 * pad) cx = w - pad - R;
+  const v = p.view, s2 = v.s * Z, ix = (focus.x - v.tx) / v.s, iy = (focus.y - v.ty) / v.s;
+  const tx = cx - ix * s2, ty = cy - iy * s2;
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.clip();
+  ctx.fillStyle = "#0B0F0D"; ctx.fillRect(cx - R, cy - R, 2 * R, 2 * R);
+  ctx.imageSmoothingEnabled = s2 < 3;
+  ctx.drawImage(p.img, tx, ty, p.img.naturalWidth * s2, p.img.naturalHeight * s2);
+  const lmap = q => ({ x: q.x * s2 + tx, y: q.y * s2 + ty });
+  if(guide) guideLine(ctx, lmap, p, guide);
+  overlay(ctx, lmap, p, null);
+  ctx.strokeStyle = "rgba(0,0,0,.7)"; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(cx - 12, cy); ctx.lineTo(cx + 12, cy); ctx.moveTo(cx, cy - 12); ctx.lineTo(cx, cy + 12); ctx.stroke();
+  ctx.strokeStyle = "#fff"; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(cx - 12, cy); ctx.lineTo(cx + 12, cy); ctx.moveTo(cx, cy - 12); ctx.lineTo(cx, cy + 12); ctx.stroke();
+  ctx.restore();
+  ctx.save();
+  ctx.strokeStyle = "rgba(255,255,255,.85)"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.stroke();
+  ctx.restore();
+}
+function draw(){
+  const w = cv.clientWidth, h = cv.clientHeight;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  const p = cur();
+  $("#empty").hidden = !!p;
+  renderHint();
+  if(!p) return;
+  const v = p.view;
+  ctx.imageSmoothingEnabled = v.s < 2.5;
+  ctx.drawImage(p.img, v.tx, v.ty, p.img.naturalWidth * v.s, p.img.naturalHeight * v.s);
+  const placing = needsPoint(p) && (mode === "none" || mode === "maybe");
+  let guide = null;
+  if(mode === "drag" && drag) guide = { y: drag.pt.y, color: css(drag.tree < 0 ? "--stick" : "--tree") };
+  else if(placing && hover){
+    const ip = toImg(p, hover);
+    if(ip.x >= 0 && ip.x <= p.img.naturalWidth && ip.y >= 0 && ip.y <= p.img.naturalHeight)
+      guide = { y: ip.y, color: css(p.stick.length < 2 ? "--stick" : "--tree") };
+  }
+  if(guide) guideLine(ctx, q => toScr(p, q), p, guide);
+  overlay(ctx, q => toScr(p, q), p, placing && hover ? hover : null);
+  if(mode === "drag" && drag) loupe(p, toScr(p, drag.pt), guide);
+  else if(placing && hover) loupe(p, hover, guide);
+}
+function renderHint(){
+  const el = $("#hint"), p = cur();
+  if(!p){ el.hidden = true; $("#undo").disabled = true; return; }
+  const t = tr(p), multi = p.trees.length > 1, who = multi ? `tree ${p.ti + 1}` : "the tree";
+  let msg, color = "var(--tree)";
+  if(p.stick.length === 0){ msg = "Mark the bottom of the stick, where it meets the ground"; color = "var(--stick)"; }
+  else if(p.stick.length === 1){ msg = `Mark the ${fmtRef()} m line on the stick`; color = "var(--stick)"; }
+  else if(t.pts.length === 0) msg = `Mark the base of ${who}, at ground level`;
+  else if(t.pts.length === 1) msg = `Mark the very top of ${who}`;
+  else { msg = "Drag points to fine-tune, then save. Add tree measures another one in this photo."; color = "#F2F5F3"; }
+  el.hidden = false;
+  el.style.setProperty("--c", color);
+  el.querySelector("span").textContent = msg;
+  const can = canUndo(p);
+  $("#undoTop").disabled = !can; $("#undo").disabled = !can;
+}
+
+/* ---------- pointer input ---------- */
+const ptrs = new Map();
+let mode = "none", start = null, drag = null, dragOff = null, pinch = null;
+function handles(p){
+  const out = p.stick.map(pt => ({ pt, tree: -1 }));
+  p.trees.forEach((t, j) => t.pts.forEach(pt => out.push({ pt, tree: j })));
+  return out;
+}
+function hitTest(p, pos, r){
+  let best = null, bd = r;
+  handles(p).forEach(hd => {
+    const d = dist(toScr(p, hd.pt), pos) - (hd.tree === p.ti || hd.tree < 0 ? 2 : 0);
+    if(d < bd){ bd = d; best = hd; }
+  });
+  return best;
+}
+function hitLine(p, pos){
+  let best = -1, bd = 10;
+  p.trees.forEach((t, j) => {
+    if(j === p.ti || t.pts.length < 2) return;
+    const a = toScr(p, t.pts[0]), b = toScr(p, t.pts[1]);
+    const dx = b.x - a.x, dy = b.y - a.y, L = dx * dx + dy * dy;
+    const u = L ? clamp(((pos.x - a.x) * dx + (pos.y - a.y) * dy) / L, 0, 1) : 0;
+    const d = Math.hypot(pos.x - (a.x + u * dx), pos.y - (a.y + u * dy));
+    if(d < bd){ bd = d; best = j; }
+  });
+  return best;
+}
+cv.addEventListener("pointerdown", e => {
+  const p = cur(); if(!p) return;
+  if(e.pointerType === "mouse" && e.button !== 0) return;
+  try{ cv.setPointerCapture(e.pointerId); }catch(_){}
+  const pos = rel(e); ptrs.set(e.pointerId, pos);
+  if(ptrs.size === 2){
+    const [a, b] = [...ptrs.values()];
+    pinch = { d: Math.max(1, dist(a, b)), m: mid(a, b), v: { ...p.view } };
+    mode = "pinch"; drag = null; draw(); return;
+  }
+  if(ptrs.size > 2) return;
+  const hit = hitTest(p, pos, e.pointerType === "touch" ? 28 : 16);
+  if(hit){
+    mode = "drag"; drag = hit;
+    if(hit.tree >= 0 && hit.tree !== p.ti){ p.ti = hit.tree; renderPanel(); }
+    const sp = toScr(p, hit.pt); dragOff = { x: sp.x - pos.x, y: sp.y - pos.y };
+  }else{
+    mode = "maybe"; start = { x: pos.x, y: pos.y, tx: p.view.tx, ty: p.view.ty, touch: e.pointerType !== "mouse" };
+  }
+  draw();
+});
+cv.addEventListener("pointermove", e => {
+  const p = cur(); if(!p) return;
+  const pos = rel(e);
+  if(e.pointerType === "mouse"){
+    hover = pos;
+    if(!ptrs.size){
+      cv.style.cursor = hitTest(p, pos, 16) ? "move" : hitLine(p, pos) >= 0 ? "pointer" : needsPoint(p) ? "crosshair" : "grab";
+      draw(); return;
+    }
+  }
+  if(!ptrs.has(e.pointerId)) return;
+  ptrs.set(e.pointerId, pos);
+  if(mode === "pinch" && ptrs.size >= 2){
+    const [a, b] = [...ptrs.values()], m = mid(a, b);
+    const ns = clamp(pinch.v.s * dist(a, b) / pinch.d, fitScale(p) * 0.5, MAXS);
+    const ix = (pinch.m.x - pinch.v.tx) / pinch.v.s, iy = (pinch.m.y - pinch.v.ty) / pinch.v.s;
+    Object.assign(p.view, { s: ns, tx: m.x - ix * ns, ty: m.y - iy * ns, auto: false });
+    draw(); return;
+  }
+  if(mode === "drag" && drag){
+    const ip = toImg(p, { x: pos.x + dragOff.x, y: pos.y + dragOff.y }), q = drag.pt;
+    q.x = clamp(ip.x, 0, p.img.naturalWidth); q.y = clamp(ip.y, 0, p.img.naturalHeight); q.e = placeErr(p);
+    renderPanel(); draw(); return;
+  }
+  if(mode === "maybe" || mode === "pan"){
+    const dx = pos.x - start.x, dy = pos.y - start.y;
+    if(mode === "maybe" && Math.hypot(dx, dy) > (start.touch ? 8 : 4)){ mode = "pan"; cv.style.cursor = "grabbing"; }
+    if(mode === "pan"){ p.view.tx = start.tx + dx; p.view.ty = start.ty + dy; p.view.auto = false; draw(); }
+  }
+});
+function endPtr(e){
+  if(!ptrs.has(e.pointerId)) return;
+  const p = cur(), pos = rel(e);
+  ptrs.delete(e.pointerId);
+  if(mode === "pinch" || mode === "hold"){ mode = ptrs.size ? "hold" : "none"; draw(); return; }
+  if(mode === "maybe" && e.type === "pointerup" && p){
+    const lineHit = hitLine(p, pos);
+    if(lineHit >= 0){ p.ti = lineHit; renderPanel(); }
+    else if(needsPoint(p)){
+      const ip = toImg(p, pos);
+      if(ip.x >= 0 && ip.y >= 0 && ip.x <= p.img.naturalWidth && ip.y <= p.img.naturalHeight){
+        const pt = { x: ip.x, y: ip.y, e: placeErr(p) };
+        if(p.stick.length < 2) p.stick.push(pt); else tr(p).pts.push(pt);
+        renderPanel();
+      }else notify("Place points on the photo itself.");
+    }
+  }
+  mode = ptrs.size ? "hold" : "none"; drag = null;
+  if(e.pointerType !== "mouse") hover = null;
+  else cv.style.cursor = needsPoint(p) ? "crosshair" : "grab";
+  draw();
+}
+cv.addEventListener("pointerup", endPtr);
+cv.addEventListener("pointercancel", endPtr);
+cv.addEventListener("pointerleave", e => { if(e.pointerType === "mouse" && !ptrs.size){ hover = null; draw(); } });
+cv.addEventListener("wheel", e => { if(!cur()) return; e.preventDefault(); const pos = rel(e); zoomAt(pos.x, pos.y, Math.exp(-e.deltaY * 0.0015)); }, { passive: false });
+
+/* ---------- panel ---------- */
+const CHECK = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M1.5 5.2 4 7.5 8.5 2.5"/></svg>';
+function renderStrip(){
+  const el = $("#strip");
+  $("#photosHead").textContent = state.photos.length ? `Photos (${state.photos.length})` : "Photos";
+  const pos = $("#photoPos"), cp = cur();
+  pos.hidden = !cp;
+  if(cp){ pos.innerHTML = ""; const b = document.createElement("b"); b.textContent = cp.fname; pos.append(b, `, photo ${state.cur + 1} of ${state.photos.length}`);
+    const tt = cp.taken != null ? fmtTime(cp.taken) : "";
+    if(tt){ const tl = document.createElement("span"); tl.className = "taken"; tl.textContent = cp.takenSrc === "exif" ? `Taken ${tt}` : `File date ${tt} (no capture time saved)`; pos.append(tl); }
+    pos.title = cp.fname; }
+  if(!state.photos.length){ el.innerHTML = '<p class="strip-empty">No photos yet.</p>'; return; }
+  el.innerHTML = "";
+  state.photos.forEach((p, i) => {
+    const n = savedCount(p);
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "thumb"; b.title = p.file;
+    b.setAttribute("aria-label", `${p.file}${n ? `, ${n} tree${n === 1 ? "" : "s"} saved` : ""}`);
+    b.setAttribute("aria-current", i === state.cur ? "true" : "false");
+    if(p.thumb){ const im = document.createElement("img"); im.src = p.thumb; im.alt = ""; b.appendChild(im); }
+    const num = document.createElement("span"); num.className = "num";
+    const digits = p.file.match(/\d+(?!.*\d)/);
+    num.textContent = digits ? digits[0] : p.file; b.appendChild(num);
+    if(n){
+      const d = document.createElement("span"); d.className = "done";
+      if(n === 1) d.innerHTML = CHECK; else { d.textContent = n; d.style.font = '600 11px/1 "Barlow Condensed", system-ui, sans-serif'; }
+      b.appendChild(d);
+    }
+    b.addEventListener("click", () => select(i));
+    el.appendChild(b);
+  });
+  const active = el.querySelector('[aria-current="true"]');
+  if(active && active.scrollIntoView) active.scrollIntoView({ block: "nearest", inline: "nearest" });
+}
+function nextPending(){
+  for(let k = 1; k < state.photos.length; k++){
+    const i = (state.cur + k) % state.photos.length;
+    if(!savedCount(state.photos[i])) return i;
+  }
+  return -1;
+}
+function renderChips(p){
+  const el = $("#chips"); el.innerHTML = "";
+  if(!p || (p.trees.length === 1 && !p.trees[0].savedId)) return;
+  p.trees.forEach((t, j) => {
+    const m = measureTree(p, t), dirty = isDirty(p, t);
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "chip" + (dirty ? " dirty" : "");
+    b.setAttribute("aria-pressed", j === p.ti ? "true" : "false");
+    b.title = treeName(p, t) + (dirty ? " (unsaved changes)" : t.savedId ? " (saved)" : "");
+    b.innerHTML = "<i></i>";
+    const nm = document.createElement("span"); nm.textContent = treeName(p, t); b.appendChild(nm);
+    if(m){ const h = document.createElement("b"); h.textContent = fmt(m.h); b.appendChild(h); }
+    if(t.savedId && !dirty) b.insertAdjacentHTML("beforeend", CHECK);
+    b.addEventListener("click", () => { p.ti = j; renderPanel(); draw(); });
+    el.appendChild(b);
+  });
+}
+function setSteps(list, done, active){
+  [...list.children].forEach((li, i) => { li.classList.toggle("done", i < done); li.classList.toggle("active", i === active); });
+}
+function renderPanel(){
+  const p = cur(), t = tr(p), m = measureTree(p, t);
+  $("#step2").textContent = `${fmtRef()} m mark on the stick`;
+  const sn = p ? p.stick.length : 0;
+  setSteps($("#stickSteps"), sn, p && sn < 2 ? sn : -1);
+  const tn = t ? t.pts.length : 0;
+  setSteps($("#treeSteps"), tn, p && sn === 2 && tn < 2 ? tn : -1);
+  const multi = p && p.trees.length > 1;
+  $("#treeSteps").children[0].lastElementChild.textContent = multi ? `Base of tree ${p.ti + 1}` : "Base of the tree";
+  $("#treeSteps").children[1].lastElementChild.textContent = multi ? `Top of tree ${p.ti + 1}` : "Top of the tree";
+  $("#treesHead").textContent = p ? `Trees in this photo (${p.trees.length})` : "Trees in this photo";
+  $("#addTree").disabled = !p || sn < 2 || tn < 2;
+  renderChips(p);
+
+  [["#fTree", "name"], ["#fBlock", "block"], ["#fRow", "row"]].forEach(([sel, key]) => {
+    const el = $(sel);
+    if(document.activeElement !== el) el.value = treeField(p, t, key);
+  });
+  const warn = $("#warn");
+  if(m){
+    $("#hval").textContent = fmt(m.h);
+    let sub = `<b>${fmt(m.h * FT)} ft</b>, ± ${fmt(m.err, m.err < 0.1 ? 2 : 1)} m from point placement.`;
+    if(m.err / m.h > 0.03) sub += " Zoom in and drag the points to tighten this.";
+    if(isDirty(p, t)) sub += " Changed since it was saved.";
+    $("#hsub").innerHTML = sub;
+  }else{
+    $("#hval").textContent = "–";
+    $("#hsub").textContent = p ? "Mark the stick and the tree to get a height." : "Add photos to start measuring.";
+  }
+  if(m && m.stickPx < 80){
+    warn.hidden = false;
+    warn.textContent = `The stick spans only ${Math.round(m.stickPx)} pixels in this photo, so small placement errors get multiplied. Treat these heights as rough.`;
+  }else warn.hidden = true;
+  $("#saveAdd").disabled = !m;
+  $("#saveNext").disabled = !m;
+  $("#saveNext").textContent = nextPending() >= 0 ? "Save and next photo" : "Save tree";
+  $("#removeTree").hidden = !p || p.trees.length < 2;
+  if(!t || $("#removeTree").dataset.tid !== t.id) disarm($("#removeTree"));
+  $("#deadBtn").disabled = !$("#fTree").value.trim();
+  renderHint();
+}
+function renderSaved(){
+  const ul = $("#saved"); ul.innerHTML = "";
+  $("#savedHead").textContent = state.saved.length ? `Saved heights (${state.saved.length})` : "Saved heights";
+  $("#savedEmpty").hidden = state.saved.length > 0;
+  $("#exportRow").hidden = state.saved.length === 0;
+  $("#dlBtn").hidden = !downloads;
+  state.saved.forEach(s => {
+    const li = document.createElement("li");
+    if(editingId === s.id){ ul.appendChild(editForm(li, s)); return; }
+    const nm = document.createElement("button"); nm.type = "button"; nm.className = "nm"; nm.title = s.name;
+    nm.textContent = s.name;
+    const loc = [s.block ? "Block " + s.block : "", s.row ? "Row " + s.row : ""].filter(Boolean).join(", ");
+    if(loc){ const mt = document.createElement("span"); mt.className = "meta"; mt.textContent = loc; nm.appendChild(mt); }
+    nm.addEventListener("click", () => {
+      for(let i = 0; i < state.photos.length; i++){
+        const j = state.photos[i].trees.findIndex(t => t.savedId === s.id);
+        if(j >= 0){ state.photos[i].ti = j; select(i); return; }
+      }
+      notify(s.dead ? "This tree was recorded as dead or removed, with no photo." : "That photo isn't loaded in this session.");
+    });
+    const h = document.createElement("div"); h.className = "h";
+    if(s.dead) h.innerHTML = `<span class="dead">Dead or removed</span><small>No height</small>`;
+    else h.innerHTML = `${fmt(s.h)} m<small>± ${fmt(s.err, s.err < 0.1 ? 2 : 1)} m, ${fmt(s.h * FT, 0)} ft</small>`;
+    const acts = document.createElement("div"); acts.className = "acts";
+    const ed = document.createElement("button"); ed.type = "button"; ed.className = "btn quiet"; ed.textContent = "Edit";
+    ed.setAttribute("aria-label", `Edit ${s.name}`);
+    ed.addEventListener("click", () => { editingId = s.id; renderSaved(); });
+    const rm = document.createElement("button"); rm.type = "button"; rm.className = "btn quiet"; rm.textContent = "Remove";
+    rm.setAttribute("aria-label", `Remove ${s.name}`);
+    rm.addEventListener("click", () => {
+      if(!armed(rm, "Confirm")) return;
+      state.saved = state.saved.filter(x => x.id !== s.id);
+      state.photos.forEach(p => p.trees.forEach(t => { if(t.savedId === s.id) t.savedId = null; }));
+      persist(); renderSaved(); renderStrip(); renderPanel();
+    });
+    acts.append(ed, rm);
+    li.append(nm, h, acts); ul.appendChild(li);
+  });
+}
+let editingId = null;
+/* Two-step confirm: the first click arms the button, a second click within 4 s carries out the action. */
+function armed(btn, text){
+  if(btn.dataset.armed === "1"){ disarm(btn); return true; }
+  btn.dataset.armed = "1"; btn.dataset.orig = btn.textContent; btn.textContent = text; btn.classList.add("armed");
+  btn._armTimer = setTimeout(() => disarm(btn), 4000);
+  return false;
+}
+function disarm(btn){
+  if(btn.dataset.armed !== "1") return;
+  clearTimeout(btn._armTimer);
+  btn.dataset.armed = ""; btn.textContent = btn.dataset.orig; btn.classList.remove("armed");
+}
+function editForm(li, s){
+  li.className = "editing";
+  const grid = document.createElement("div"); grid.className = "ids";
+  const inputs = {};
+  [["name", "Tree"], ["block", "Block"], ["row", "Row"]].forEach(([key, label]) => {
+    const l = document.createElement("label"); l.textContent = label;
+    const i = document.createElement("input"); i.type = "text"; i.autocomplete = "off"; i.value = s[key] || "";
+    i.addEventListener("keydown", e => {
+      if(e.key === "Enter"){ e.preventDefault(); commit(); }
+      else if(e.key === "Escape"){ e.preventDefault(); e.stopPropagation(); cancel(); }
+    });
+    l.appendChild(i); grid.appendChild(l); inputs[key] = i;
+  });
+  const info = document.createElement("p"); info.className = "edit-info";
+  info.textContent = s.dead ? "Dead or removed, no height." : `Height ${fmt(s.h)} m. To change the height, click the tree's name and adjust its points.`;
+  const row = document.createElement("div"); row.className = "edit-btns";
+  const ok = document.createElement("button"); ok.type = "button"; ok.className = "btn primary"; ok.textContent = "Save changes";
+  const no = document.createElement("button"); no.type = "button"; no.className = "btn"; no.textContent = "Cancel";
+  row.append(ok, no);
+  li.append(grid, info, row);
+  function cancel(){ editingId = null; renderSaved(); }
+  function commit(){
+    const name = inputs.name.value.trim();
+    if(!name){ notify("A Tree ID is required."); inputs.name.focus(); return; }
+    s.name = name; s.block = inputs.block.value.trim(); s.row = inputs.row.value.trim();
+    state.photos.forEach(p => p.trees.forEach(t => { if(t.savedId === s.id){ t.name = s.name; t.block = s.block; t.row = s.row; } }));
+    editingId = null;
+    persist(); renderSaved(); renderStrip(); renderPanel(); draw();
+    notify(`Saved changes to ${s.name}.`);
+  }
+  ok.addEventListener("click", commit);
+  no.addEventListener("click", cancel);
+  setTimeout(() => { inputs.name.focus(); }, 0);
+  return li;
+}
+function saveTree(then){
+  const p = cur(), t = tr(p), m = measureTree(p, t); if(!m) return;
+  const name = $("#fTree").value.trim();
+  if(!name){ notify("Enter a Tree ID before saving."); $("#fTree").focus(); return; }
+  t.name = name; t.block = $("#fBlock").value.trim(); t.row = $("#fRow").value.trim();
+  state.last_name = t.name; state.last_block = t.block; state.last_row = t.row;
+  const entry = { id: t.savedId || uid(), name: t.name, block: t.block, row: t.row, h: m.h, err: m.err, ref: state.ref, stickPx: m.stickPx, treePx: m.treePx, at: new Date().toISOString() };
+  const i = state.saved.findIndex(s => s.id === entry.id);
+  if(i >= 0) state.saved[i] = entry; else state.saved.push(entry);
+  t.savedId = entry.id;
+  persist(); renderSaved();
+  notify(`${i >= 0 ? "Updated" : "Saved"} ${t.name}: ${fmt(m.h)} m`);
+  if(then === "add") addTree(p);
+  else if(then === "next"){ const n = nextPending(); if(n >= 0){ select(n); return; } }
+  renderStrip(); renderPanel(); draw();
+}
+
+/* ---------- export ---------- */
+function rows(){
+  const out = [["Tree", "Block", "Row", "Phenotype"]];
+  state.saved.forEach(s => out.push([s.name, s.block || "", s.row || "", s.dead ? "" : s.h.toFixed(2)]));
+  return out;
+}
+function toCSV(){
+  return rows().map(r => r.map(c => { const t = String(c); return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; }).join(",")).join("\n");
+}
+$("#dlBtn").addEventListener("click", async () => {
+  if(!downloads) return;
+  try{
+    await downloads.save({ filename: "tree-heights.csv", data: toCSV() });
+    notify("Downloaded tree-heights.csv");
+  }catch(err){
+    const code = err && err.code;
+    if(code === "declined") return;
+    if(code === "rate_limited") notify("A save prompt is already open.");
+    else if(["unavailable", "not_granted", "capability_disabled", "capability_removed"].includes(code)){ downloads = null; renderSaved(); notify("Downloads aren't available here. Use Copy for spreadsheet instead."); }
+    else notify("The download didn't go through. Use Copy for spreadsheet instead.");
+  }
+});
+$("#copyBtn").addEventListener("click", async () => {
+  const text = rows().map(r => r.join("\t")).join("\n");
+  let ok = false;
+  try{ await navigator.clipboard.writeText(text); ok = true; }catch(e){}
+  if(!ok){
+    const ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    try{ ok = document.execCommand("copy"); }catch(e){}
+    ta.remove();
+  }
+  notify(ok ? `Copied ${state.saved.length} row${state.saved.length === 1 ? "" : "s"}. Paste into any spreadsheet.` : "Copying was blocked by the browser.");
+});
+$("#clearSaved").addEventListener("click", () => {
+  if(!armed($("#clearSaved"), `Click again to clear all ${state.saved.length}`)) return;
+  state.saved = []; state.photos.forEach(p => p.trees.forEach(t => t.savedId = null));
+  persist(); renderSaved(); renderStrip(); renderPanel();
+});
+
+/* ---------- controls ---------- */
+const fileIn = $("#file");
+$("#addBtn").addEventListener("click", () => fileIn.click());
+$("#emptyAdd").addEventListener("click", () => fileIn.click());
+fileIn.addEventListener("change", () => { if(fileIn.files.length) addFiles(fileIn.files); fileIn.value = ""; });
+["dragenter", "dragover"].forEach(t => viewer.addEventListener(t, e => { e.preventDefault(); viewer.classList.add("drop"); }));
+["dragleave", "drop"].forEach(t => viewer.addEventListener(t, e => { e.preventDefault(); viewer.classList.remove("drop"); }));
+viewer.addEventListener("drop", e => { if(e.dataTransfer && e.dataTransfer.files.length) addFiles(e.dataTransfer.files); });
+
+const centerZoom = f => zoomAt(cv.clientWidth / 2, cv.clientHeight / 2, f);
+$("#zIn").addEventListener("click", () => centerZoom(1.5));
+$("#zOut").addEventListener("click", () => centerZoom(1 / 1.5));
+$("#zFit").addEventListener("click", () => { const p = cur(); if(p){ fit(p); draw(); } });
+function canUndo(p){
+  if(!p) return false;
+  const t = tr(p);
+  return t.pts.length > 0 || (p.trees.length > 1 && !t.savedId) || (p.trees.length === 1 && p.stick.length > 0);
+}
+function undo(){
+  const p = cur(); if(!canUndo(p)) return;
+  const t = tr(p);
+  if(t.pts.length) t.pts.pop();
+  else if(p.trees.length > 1 && !t.savedId) removeTree(p, p.ti);
+  else p.stick.pop();
+  if(mode === "drag"){ mode = "none"; drag = null; }
+  renderStrip(); renderPanel(); draw();
+}
+function newTree(){ const p = cur(); if(!p || $("#addTree").disabled) return; addTree(p); renderPanel(); draw(); }
+$("#undo").addEventListener("click", undo);
+$("#undoTop").addEventListener("click", undo);
+document.querySelectorAll("#sortBy button").forEach(b => b.addEventListener("click", () => setSort(b.dataset.sort)));
+$("#clear").addEventListener("click", () => { const p = cur(); if(p){ tr(p).pts = []; renderPanel(); draw(); } });
+$("#addTree").addEventListener("click", newTree);
+$("#saveAdd").addEventListener("click", () => saveTree("add"));
+$("#saveNext").addEventListener("click", () => saveTree("next"));
+$("#deadBtn").addEventListener("click", () => {
+  const name = $("#fTree").value.trim();
+  if(!name){ notify("Enter a Tree ID first."); $("#fTree").focus(); return; }
+  const block = $("#fBlock").value.trim(), row = $("#fRow").value.trim();
+  state.saved.push({ id: uid(), name, block, row, h: null, err: null, dead: true, ref: null, stickPx: null, treePx: null, at: new Date().toISOString() });
+  state.last_name = name; state.last_block = block; state.last_row = row;
+  const p = cur();
+  if(p){ const t = tr(p); if(!t.savedId) t.name = null; t.block = null; t.row = null; }
+  else state.draft = {};
+  persist(); renderSaved(); renderPanel(); draw();
+  notify(`Recorded ${name} as dead or removed.`);
+});
+$("#removeTree").addEventListener("click", () => {
+  const p = cur(); if(!p) return;
+  const t = tr(p);
+  const btn = $("#removeTree");
+  if(t.savedId){ btn.dataset.tid = t.id; if(!armed(btn, "Click again to remove it and its saved height")) return; }
+  removeTree(p, p.ti); renderStrip(); renderPanel(); draw();
+});
+[["#fTree", "name"], ["#fBlock", "block"], ["#fRow", "row"]].forEach(([sel, key]) => {
+  const el = $(sel);
+  el.addEventListener("keydown", e => { if(e.key === "Enter") saveTree("add"); });
+  el.addEventListener("input", () => {
+    const p = cur();
+    if(p){ tr(p)[key] = el.value; renderChips(p); draw(); } else state.draft[key] = el.value;
+    if(key === "name") $("#deadBtn").disabled = !el.value.trim();
+  });
+});
+$("#ref").addEventListener("input", e => {
+  const v = parseFloat(e.target.value);
+  if(v > 0){ state.ref = v; persist(); renderPanel(); draw(); }
+});
+window.addEventListener("keydown", e => {
+  if(e.target.closest && e.target.closest("input, textarea")){
+    if(e.key === "Escape") e.target.blur();
+    return;
+  }
+  if(e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key;
+  if(k === "Escape" || k === "z" || k === "Z" || k === "Backspace"){ e.preventDefault(); undo(); }
+  else if(k === "f" || k === "F"){ const p = cur(); if(p){ fit(p); draw(); } }
+  else if(k === "a" || k === "A"){ newTree(); }
+  else if(k === "+" || k === "="){ centerZoom(1.5); }
+  else if(k === "-" || k === "_"){ centerZoom(1 / 1.5); }
+  else if(k === "ArrowRight"){ select(state.cur + 1); }
+  else if(k === "ArrowLeft"){ select(state.cur - 1); }
+});
+if(window.matchMedia){
+  const mq = window.matchMedia("(prefers-color-scheme: dark)");
+  if(mq.addEventListener) mq.addEventListener("change", draw);
+}
+
+/* ---------- init ---------- */
+loadStore();
+$("#ref").value = fmtRef();
+renderSort();
+new ResizeObserver(resize).observe(viewer);
+resize(); renderStrip(); renderPanel(); renderSaved();
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(draw);
+if(window.claude && typeof window.claude.use === "function"){
+  window.claude.use("downloads").then(d => { downloads = d; renderSaved(); }).catch(() => {});
+}
+})();
+</script>
+</body>
+</html>

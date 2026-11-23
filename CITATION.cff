@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you use quickmeasure, please cite it as below."
+title: "quickmeasure: tree heights from photos with a reference stick"
+abstract: >-
+  quickmeasure is a single-file web app for measuring the height of trees, or any
+  upright object, in photographs that include a reference stick of known length
+  standing against the object. The user marks the bottom of the stick and a known
+  mark on it, then the base and top of each tree; the height is the tree's length
+  in pixels scaled by the stick's pixels per metre, with an uncertainty from how
+  precisely the points were placed. It runs entirely in the browser (photos never
+  leave the computer), works offline, and exports heights with their source photo,
+  reference and pixel measurements as CSV, plus a session file holding every point.
+type: software
+authors:
+  - given-names: Matthew
+    family-names: Davis
+version: "1.0.0"
+date-released: "2026-11-22"
+license: MIT
+repository-code: "https://github.com/matthewwdavis/quickmeasure"
+url: "https://matthewwdavis.github.io/quickmeasure/"
+keywords:
+  - tree height
+  - plant phenotyping
+  - image-based measurement
+  - reference object
+  - forestry
+  - web app

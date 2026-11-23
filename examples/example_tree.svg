@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1200" viewBox="0 0 1600 1200">
+<!-- quickmeasure example: drawn at 125 px per metre. Ground at y = 1040. The stick is 3.5 m tall with bands every 0.5 m and a
+     black line at 3 m (y = 665). The tree's top is at y = 365, so it is 5.4 m tall. CC BY 4.0, see LICENSE-docs. -->
+<defs>
+<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9CC8E6"/><stop offset="1" stop-color="#E4F0F6"/></linearGradient>
+<linearGradient id="grass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8DAA5B"/><stop offset="1" stop-color="#6E8C40"/></linearGradient>
+<linearGradient id="bark" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5A4030"/><stop offset=".55" stop-color="#7A5A42"/><stop offset="1" stop-color="#4E3729"/></linearGradient>
+</defs>
+<rect width="1600" height="1200" fill="url(#sky)"/>
+<path d="M0 930 C180 880 330 905 520 875 C720 845 900 900 1100 870 C1300 842 1460 880 1600 860 V1040 H0Z" fill="#B9CBA4"/>
+<path d="M0 985 C260 960 520 985 800 970 C1080 955 1340 980 1600 965 V1040 H0Z" fill="#A3BC86"/>
+<rect y="1040" width="1600" height="160" fill="url(#grass)"/>
+<path d="M0 1040 H1600" stroke="#5F7A36" stroke-width="3"/>
+<g fill="#7E9A6B" opacity=".75">
+<rect x="1287" y="900" width="10" height="70" fill="#6B5444"/>
+<ellipse cx="1292" cy="880" rx="62" ry="58"/>
+<rect x="187" y="910" width="9" height="60" fill="#6B5444"/>
+<ellipse cx="191" cy="892" rx="52" ry="50"/>
+</g>
+<ellipse cx="760" cy="1046" rx="300" ry="22" fill="#4F672C" opacity=".45"/>
+<path d="M716 1040 C724 960 726 860 728 770 L768 770 C770 860 772 960 782 1040Z" fill="url(#bark)"/>
+<path d="M738 800 C700 740 650 700 600 660 M752 790 C790 730 850 690 905 650 M746 780 C748 700 748 620 748 520" stroke="#5A4030" stroke-width="12" fill="none" stroke-linecap="round"/>
+<g fill="#3E7A35">
+<ellipse cx="748" cy="560" rx="262" ry="195"/>
+<circle cx="560" cy="640" r="150"/>
+<circle cx="940" cy="640" r="145"/>
+<circle cx="748" cy="470" r="105"/>
+<circle cx="640" cy="500" r="120"/>
+<circle cx="860" cy="505" r="118"/>
+</g>
+<g fill="#4F9443">
+<circle cx="700" cy="470" r="70"/>
+<circle cx="590" cy="580" r="85"/>
+<circle cx="860" cy="560" r="80"/>
+<circle cx="760" cy="640" r="95"/>
+</g>
+<g fill="#6DB05A" opacity=".8">
+<circle cx="690" cy="440" r="36"/>
+<circle cx="575" cy="560" r="40"/>
+<circle cx="835" cy="520" r="38"/>
+</g>
+<g>
+<rect x="696" y="602.5" width="16" height="437.5" fill="#FFFFFF" stroke="#1D1D1D" stroke-width="1.5"/>
+<rect x="696" y="977.5" width="16" height="62.5" fill="#D62828"/>
+<rect x="696" y="852.5" width="16" height="62.5" fill="#D62828"/>
+<rect x="696" y="727.5" width="16" height="62.5" fill="#D62828"/>
+<rect x="696" y="602.5" width="16" height="62.5" fill="#D62828"/>
+<rect x="696" y="602.5" width="16" height="437.5" fill="none" stroke="#1D1D1D" stroke-width="1.5"/>
+<path d="M688 665 H720 M690 790 H718 M690 915 H718" stroke="#111111" stroke-width="3"/>
+</g>
+<g font-family="Helvetica, Arial, sans-serif" font-weight="700" fill="#111111" text-anchor="end">
+<text x="682" y="673" font-size="24">3 m</text>
+<text x="682" y="797" font-size="20">2 m</text>
+<text x="682" y="922" font-size="20">1 m</text>
+</g>
+</svg>
